@@ -2,138 +2,151 @@
 import os
 import shutil
 import uuid
-import asyncio
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from fastapi.responses import StreamingResponse
-import json
+import subprocess
+from typing import Optional
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException
+from fastapi.responses import FileResponse
 
-from app.api.schemas import GenerationResponse
+# Core Pipeline Integrations
 from app.src.crew import AlgoFrameCrewPipeline
-from app.services.manim_service import ManimCompilerService
 from app.services.video_service import VideoMultiplexService
-from app.core.config import settings
+import litellm 
 
-router = APIRouter(prefix="/api", tags=["Pipeline Core"])
+router = APIRouter(prefix="/api", tags=["Synthesis Core"])
 
-def run_agentic_pipeline_blocking(audio_path: str, primitive_type: str) -> str:
-    """
-    Synchronous wrapper function that passes data to CrewAI. 
-    Runs inside an independent thread executor pool to prevent server blocking.
-    """
-    # Step 1: Simulate the transcription text pull
-    # In production, replace this string pass with a live call to your audio_service.py/Groq Whisper
-    simulated_transcript = (
-        "Initialize an array container containing initial integers 10 and 20. "
-        "Then insert a new item value 15 at index location 1, shifting index 1 forward to index 2."
-    )
-    
-    # Step 2: Kick off the CrewAI agentic pipeline loops (Using verified CrewAI 1.x inputs dictionary syntax)
-    pipeline = AlgoFrameCrewPipeline()
-    crew_output = pipeline.compile_animation_pipeline(
-        user_transcript=simulated_transcript, 
-        primitive_type=primitive_type
-    )
-    return crew_output
+TEMP_DIR = "temp_processing"
+os.makedirs(TEMP_DIR, exist_ok=True)
 
 @router.post("/generate-video")
-async def generate_video_endpoint(
-    primitive_type: str = Form(..., description="Target DSA Primitive (e.g., ARRAY, LINKED_LIST, BST)"),
-    audio_file: UploadFile = File(..., description="Raw recorded voice explanation audio file binary stream")
+def generate_video_pipeline(
+    primitive_type: str = Form(..., description="The underlying data structure or algorithm type (e.g., array, tree, graph)"),
+    explanation_text: Optional[str] = Form(None, description="Raw explanation string if inputting text directly"),
+    file: Optional[UploadFile] = File(None, description="Uploaded Audio file (.wav/.mp4) or Text file (.txt)")
 ):
-    """
-    Multipart Form endpoint that captures raw audio, saves it to a secure 
-    temporary path, runs the multi-agent pipeline, and streams status updates back.
-    """
-    # Verify file security extensions before initializing system tracks
-    allowed_extensions = [".wav", ".mp3", ".m4a"]
-    file_extension = os.path.splitext(audio_file.filename)[1].lower()
-    if file_extension not in allowed_extensions:
-        raise HTTPException(status_code=400, detail="Unsupported audio file format. Must be .wav, .mp3, or .m4a.")
+    session_id = uuid.uuid4().hex[:8]
+    final_text_prompt = ""
+    saved_audio_path = None
 
-    # Create temporary isolation storage tracks
-    session_id = str(uuid.uuid4())[:8]
-    temp_dir = f"temp_{session_id}"
-    os.makedirs(temp_dir, exist_ok=True)
-    local_audio_path = os.path.join(temp_dir, f"input_narration{file_extension}")
+    # ─── STEP 1: RESOLVE INTAKE MODALITY ──────────────────────────────────────
+    if file:
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        temp_file_path = os.path.join(TEMP_DIR, f"input_{session_id}{file_ext}")
+        
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    # Write the uploaded audio file chunk-by-chunk onto disk
-    with open(local_audio_path, "wb") as buffer:
-        shutil.copyfileobj(audio_file.file, buffer)
-
-    async def event_stream_generator():
-        try:
-            yield f"data: {json.dumps({'status': 'processing', 'message': 'Audio successfully received. Transcribing voice tracks via Groq Whisper...'})}\n\n"
-            await asyncio.sleep(1.0)
-
-            yield f"data: {json.dumps({'status': 'processing', 'message': 'Spawning CrewAI Agents with dynamic planning optimization enabled...'})}\n\n"
-            await asyncio.sleep(1.0)
-
-            # Route the heavy multi-agent compilation task to a separate worker thread
-            loop = asyncio.get_running_loop()
-            yield f"data: {json.dumps({'status': 'processing', 'message': 'Agents are calculating memory traces and writing Manim code scripts...'})}\n\n"
+        if file_ext == ".txt":
+            print(f"⚙️ [PROCESSING]: Text file received. Parsing file string blocks...")
+            with open(temp_file_path, "r", encoding="utf-8") as txt_file:
+                final_text_prompt = txt_file.read()
+                
+        elif file_ext in [".wav", ".mp3", ".m4a", ".mp4"]:
+            print(f"⚙️ [PROCESSING]: Audio successfully received. Transcribing voice tracks via Groq Whisper...")
+            saved_audio_path = temp_file_path
+            try:
+                with open(saved_audio_path, "rb") as audio_file:
+                    transcription = litellm.transcription(
+                        model="groq/whisper-large-v3",
+                        file=audio_file
+                    )
+                final_text_prompt = transcription.get("text", "")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Groq Whisper transcription matrix failed: {str(e)}")
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format type uploaded.")
             
-            # Execute the core agent pipeline asynchronously
-            agent_log = await loop.run_in_executor(None, run_agentic_pipeline_blocking, local_audio_path, primitive_type)
-            
-            # For demonstration purposes, we run a default fallback scene.
-            # In your live deployment, your agents will dynamically pass their generated script string here.
-            fallback_manim_script = """
-from manim import *
-class DataStructureScene(Scene):
-    def construct(self):
-        title = Text("Array Operation: Insertion", color=BLUE).to_edge(UP)
-        arr = VGroup(*[Square(side_length=1.0) for _ in range(3)]).arrange(RIGHT, buff=0.2)
-        val1 = Text("10").move_to(arr[0].get_center())
-        val2 = Text("20").move_to(arr[1].get_center())
-        self.play(Write(title), DrawBorderThenFill(arr), Write(val1), Write(val2))
-        self.wait(1)
-        # Shift and Insert Animation Trace
-        val_new = Text("15", color=AMBER).move_to(arr[1].get_center() + 2*UP)
-        self.play(val2.animate.move_to(arr[2].get_center()), arr[2].animate.set_color(PURPLE))
-        self.play(val_new.animate.move_to(arr[1].get_center()), arr[1].animate.set_color(AMBER))
-        self.wait(2)
-            """
-            
-            yield f"data: {json.dumps({'status': 'processing', 'message': 'Validator approved logic. Executing local Manim subprocess shell compiler...'})}\n\n"
-            
-            # Compile the Manim script code string directly to a physical file
-            compiler = ManimCompilerService()
-            compile_result = compiler.compile_scene_string(fallback_manim_script, "DataStructureScene")
-            
-            if compile_result["status"] != "success":
-                # FIX: String evaluation broken out cleanly to remove inner backslash nesting syntax traps
-                error_msg = f"Manim Compiler Error: {compile_result['error_trace']}"
-                yield f"data: {json.dumps({'status': 'failed', 'message': error_msg})}\n\n"
-                return
+    elif explanation_text:
+        print(f"⚙️ [PROCESSING]: Direct text explanation token string captured...")
+        final_text_prompt = explanation_text
+    else:
+        raise HTTPException(status_code=400, detail="No source artifact provided. Upload an audio/text asset or supply inline text.")
 
-            yield f"data: {json.dumps({'status': 'processing', 'message': 'Video rendered. Initializing FFmpeg zero-re-encode audio-video multiplexing...'})}\n\n"
-            
-            # Multiplex the audio track directly onto the silent video
-            muxer = VideoMultiplexService()
-            mux_result = muxer.merge_audio_video(compile_result["video_path"], local_audio_path)
-            
-            if mux_result["status"] != "success":
-                # FIX: String evaluation broken out cleanly to remove inner backslash nesting syntax traps
-                mux_error_msg = f"Multiplexer Error: {mux_result['message']}"
-                yield f"data: {json.dumps({'status': 'failed', 'message': mux_error_msg})}\n\n"
-                return
+    if not final_text_prompt.strip():
+        raise HTTPException(status_code=400, detail="Parsed text engine prompt cannot be completely empty.")
 
-            # Construct the final direct public download URL asset path string
-            final_video_url = f"{settings.SPACE_HOST_URL}/static/{mux_result['filename']}"
-            
-            yield f"data: {json.dumps({
-                'status': 'completed', 
-                'message': 'Production asset compiled successfully.',
-                'video_url': final_video_url
-            })}\n\n"
+    # ─── STEP 2: RUN THE CRITICAL AGENTIC FLOW ────────────────────────────────
+    print(f"⚙️ [PROCESSING]: Spawning CrewAI Agents with dynamic planning optimization enabled...")
+    try:
+        crew_pipeline = AlgoFrameCrewPipeline()
+        generated_manim_code = crew_pipeline.compile_animation_pipeline(
+            user_transcript=final_text_prompt,
+            primitive_type=primitive_type
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent Execution Spiral Crash: {str(e)}")
 
-        except Exception as e:
-            yield f"data: {json.dumps({'status': 'failed', 'message': f'Pipeline Fatal Runtime Disruption: {str(e)}'})}\n\n"
-        finally:
-            # Clean up temporary storage tracks to prevent server disk clutter
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
-            if 'compile_result' in locals() and os.path.exists(compile_result.get("clean_up_target", "")):
-                os.remove(compile_result["clean_up_target"])
+    # ─── STEP 3: RUN COMPILER SUBPROCESS SHELL ────────────────────────────────
+    print(f"⚙️ [PROCESSING]: Validator approved logic. Executing local Manim subprocess shell compiler...")
+    
+    # BULLETPROOF MARKDOWN STRIPPER
+    # Safely slices out the code content and discards the markdown fence headers/footers
+    if "```python" in generated_manim_code:
+        generated_manim_code = generated_manim_code.split("```python")[1].split("```")[0]
+    elif "```" in generated_manim_code:
+        generated_manim_code = generated_manim_code.split("```")[1].split("```")[0]
+    
+    generated_manim_code = generated_manim_code.strip()
+    # ─── BYPASS LATEX ENVIRONMENT DEPENDENCIES ─────────────────────────────
+    # Forces Manim to use the local Pango system font engine instead of LaTeX
+    generated_manim_code = generated_manim_code.replace("Tex(", "Text(")
+    generated_manim_code = generated_manim_code.replace("MathTex(", "Text(")
+    # ───────────────────────────────────────────────────────────────────────
+    scene_filename = f"scene_{session_id}.py"
+    with open(scene_filename, "w", encoding="utf-8") as f:
+        f.write(generated_manim_code)
 
-    return StreamingResponse(event_stream_generator(), media_type="text/event-stream")
+    try:
+        compile_cmd = ["manim", "-ql", scene_filename]
+        subprocess_result = subprocess.run(compile_cmd, capture_output=True, text=True, timeout=120)
+        
+        if subprocess_result.returncode != 0:
+            print(f"Manim Compiler Trace: {subprocess_result.stderr}")
+            raise HTTPException(status_code=500, detail="Manim internal scene execution validation fault.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Manim Subprocess Engine Failure: {str(e)}")
+
+    # ─── STEP 4: SEAMLESS AUDIO-VIDEO MULTIPLEX PASS ─────────────────────────
+    predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/480p30/ArrayInitialization.mp4")
+
+    if saved_audio_path:
+        print(f"⚙️ [PROCESSING]: Video rendered. Initializing FFmpeg zero-re-encode audio-video multiplexing...")
+        multiplexer = VideoMultiplexService()
+        merge_result = multiplexer.merge_audio_video(
+            silent_video_path=predicted_silent_video,
+            raw_audio_path=saved_audio_path
+        )
+        
+        if merge_result["status"] == "error":
+            raise HTTPException(status_code=500, detail=f"Multiplexer Failure: {merge_result['message']}")
+        
+        final_video_target = merge_result["final_asset_path"]
+    else:
+        print(f"⚙️ [PROCESSING]: Video rendered. Text intake modality confirmed — skipping media multiplexer track...")
+        multiplexer = VideoMultiplexService()
+        fallback_check = multiplexer.merge_audio_video(predicted_silent_video, "dummy_non_existent.wav")
+        
+        if os.path.exists(fallback_check.get("final_asset_path", "")):
+             final_video_target = fallback_check["final_asset_path"]
+        else:
+             final_video_target = predicted_silent_video
+             for root, _, files in os.walk("."):
+                 if f"scene_{session_id}" in root:
+                     mp4s = [f for f in files if f.endswith(".mp4")]
+                     if mp4s:
+                         final_video_target = os.path.join(root, mp4s[0])
+                         break
+
+    # ─── STEP 5: FILE RESTORATION CLEANUP ─────────────────────────────────────
+    if os.path.exists(scene_filename):
+        os.remove(scene_filename)
+    if saved_audio_path and os.path.exists(saved_audio_path):
+        os.remove(saved_audio_path)
+
+    if not os.path.exists(final_video_target):
+        raise HTTPException(status_code=404, detail="Final compiled video production target missing from drive container.")
+
+    return FileResponse(
+        path=final_video_target, 
+        media_type="video/mp4", 
+        filename=os.path.basename(final_video_target)
+    )

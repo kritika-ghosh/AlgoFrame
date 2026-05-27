@@ -1,77 +1,60 @@
-# test_client.py
+# test_swap_client.py
+import requests
 import os
-import wave
-import struct
-import httpx
-import json
 
-def create_dummy_wav(filename="dummy_test.wav", duration_seconds=1):
-    """Generates a brief, valid blank audio file to satisfy multipart form requirements."""
-    sample_rate = 44100
-    num_samples = sample_rate * duration_seconds
+def test_text_synthesis():
+    url = "http://127.0.0.1:7860/api/generate-video"
     
-    with wave.open(filename, "w") as wav_file:
-        wav_file.setparams((1, 2, sample_rate, num_samples, "NONE", "not compressed"))
-        for _ in range(num_samples):
-            wav_file.writeframes(struct.pack('h', 0))
-    print(f" -> Generated temporary audio boundary file: {filename}")
-
-def run_local_pipeline_test():
-    server_url = "http://127.0.0.1:7860/api/generate-video"
-    dummy_audio = "dummy_test.wav"
+    # 1. Formulate the technical explanation paragraph for swapping
+    explanation = (
+    "We want to animate the Block Swap Algorithm to left-rotate an array by 2 positions. "
+    "Initialize a contiguous 5-element array container displaying the integers 10, 20, 30, 40, and 50 positioned horizontally. "
+    "Step 1: Divide the array into two primary visual chunks. Highlight the first two elements [10, 20] as 'Block A' "
+    "using a distinct blue border outline, and the remaining three elements [30, 40, 50] as 'Block B' using a gold border outline. "
+    "Step 2: Because Block B is longer than Block A, subdivide Block B. Keep the single element [30] stationary, "
+    "and group the rightmost two elements [40, 50] into a sub-block called 'Block Br' that perfectly matches the size of Block A. "
+    "Step 3: Animate a block-level swap. Arcing gracefully along parallel paths, shift the elements of Block A [10, 20] "
+    "downward and over to the final two slots of the array, while simultaneously moving Block Br [40, 50] upward and "
+    "into the first two slots of the array. The visual arrangement is now [40, 50, 30, 10, 20]. "
+    "Step 4: Change the background fill of the slots containing [10, 20] to a solid deep green to indicate they have "
+    "successfully reached their final, permanently shifted index locations. "
+    "Step 5: Conclude by animating a final swap between the remaining active elements [40, 50] and the middle element [30] "
+    "to achieve the completely rotated final state of [30, 40, 50, 10, 20], fading out all labels except the final array container."
+)
     
-    # 1. Initialize temporary boundary asset files
-    create_dummy_wav(dummy_audio, duration_seconds=1)
-    
-    payload_data = {
-        "primitive_type": "ARRAY" 
+    # 2. Package request parameters matching FastAPI's Form intake expectations
+    payload = {
+        "primitive_type": "variables",
+        "explanation_text": explanation
     }
     
-    print(f" -> Injecting streaming request parameters to endpoint: {server_url}")
-    print(" -> Awaiting Agentic Execution Stream updates...\n" + "="*60)
+    print("🚀 Sending direct text explanation payload to AlgoFrame Core Engine...")
+    print(f"📝 Prompt: \"{explanation[:60]}...\"")
+    print("============================================================")
     
     try:
-        # Open file handler inside an absolute contextual container pass
-        with open(dummy_audio, "rb") as f:
-            file_payload = {
-                "audio_file": (dummy_audio, f, "audio/wav")
-            }
+        # Fire the POST request without passing files to trigger text modality
+        response = requests.post(url, data=payload, timeout=180)
+        
+        if response.status_code == 200:
+            output_filename = "swap_animation_production.mp4"
             
-            # Connect via an HTTP client supporting Live Event-Stream reading
-            with httpx.Client(timeout=60.0) as client:
-                with client.stream("POST", server_url, data=payload_data, files=file_payload) as response:
-                    if response.status_code != 200:
-                        print(f"Server returned an error status protocol: {response.status_code}")
-                        return
-                    
-                    # Read incoming server lines sequentially as they stream in
-                    for line in response.iter_lines():
-                        if line.startswith("data: "):
-                            clean_line = line.replace("data: ", "").strip()
-                            event_data = json.loads(clean_line)
-                            
-                            status = event_data.get("status")
-                            message = event_data.get("message", "")
-                            
-                            if status == "processing":
-                                print(f" ⚙️ [PROCESSING]: {message}")
-                            elif status == "completed":
-                                print("\n" + "="*60)
-                                print(f" 🎉 [SUCCESS]: {message}")
-                                print(f" 📦 Final Asset Video URL: {event_data.get('video_url')}")
-                            elif status == "failed":
-                                print(f" ❌ [FAILURE]: {message}")
-                                
-    except Exception as e:
-        print(f"Transport layer testing anomaly: {str(e)}")
-    finally:
-        # File streams are fully closed here, making deletion 100% safe on Windows
-        if os.path.exists(dummy_audio):
+            # Write the raw incoming byte stream into a physical video file container
+            with open(output_filename, "wb") as f:
+                f.write(response.content)
+                
+            print("\n============================================================")
+            print(f"✅ SUCCESS! Final video compiled and saved to disk.")
+            print(f"🎬 Asset Location: {os.path.abspath(output_filename)}")
+        else:
+            print(f"\n❌ FAILURE: Server returned status code {response.status_code}")
             try:
-                os.remove(dummy_audio)
-                print("\n -> Cleaned up temporary audio files.")
-            except Exception as e:
-                print(f"\n -> Warning: Local disk asset cleanup trace discrepancy: {str(e)}")
+                print(f"Detailed Error: {response.json()}")
+            except Exception:
+                print(f"Raw Response Text: {response.text}")
+                
+    except requests.exceptions.RequestException as e:
+        print(f"\n❌ Transport layer connection failure: {e}")
 
 if __name__ == "__main__":
-    run_local_pipeline_test()
+    test_text_synthesis()
