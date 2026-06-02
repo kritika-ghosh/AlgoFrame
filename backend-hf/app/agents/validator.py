@@ -7,15 +7,14 @@ class ValidatorAgent:
 
     def get_agent(self) -> Agent:
         return Agent(
-            role="QA Director",
-            goal="Verify compilation stability, completeness, and clean visual layout of Manim code.",
+            role="State-Tracking JSON Auditor",
+            goal="Verify that the JSON operations sequence correctly implements the planned roadmap and is syntactically flawless.",
             backstory=(
-                "You are a strict code auditor. You look at raw code files and scan for three fatal issues:\n"
-                "1. Syntax errors, unclosed brackets, or unclosed string indicators.\n"
-                "2. Chunks of repeating, alternating lines of code that indicate a model generation loop.\n"
-                "3. Incomplete blocks where the code cuts off mid-sentence.\n\n"
-                "CRUCIAL: If any of these structural red flags are detected, you must REJECT the output completely "
-                "and command a clean rewrite from step one."
+                "You are an unyielding protocol auditor. You scan the generated JSON operations array to ensure:\n"
+                "1. The JSON is perfectly valid and matches the specified actions (CREATE_ARRAY, HIGHLIGHT, SWAP, SWAP_BLOCKS, WAIT).\n"
+                "2. The IDs referenced ('node_0', 'node_1', etc.) match the created nodes.\n"
+                "3. The block swap operations are correct and match the transcript layout.\n"
+                "Output ONLY the verified JSON array, completely free of any markdown code blocks or explanations."
             ),
             llm=self.llm_instance,
             allow_delegation=False,

@@ -17,7 +17,7 @@ from app.api.routes import router as api_router
 
 # 1. Route LiteLLM seamlessly to Groq system parameters globally
 os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
-
+os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
 # 2. Strict cleanup: Prevent CrewAI from drifting back into OpenAI fallbacks
 if "OPENAI_API_KEY" in os.environ:
     del os.environ["OPENAI_API_KEY"]

@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     SPACE_HOST_URL: str = "http://127.0.0.1:7860"
     MANIM_QUALITY_FLAG: str = "-ql" 
+    GEMINI_API_KEY: str
 
     # Tells Pydantic to look for a .env file in the root execution context path
     model_config = SettingsConfigDict(

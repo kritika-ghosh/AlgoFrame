@@ -10,28 +10,31 @@ class AlgoFrameCrewPipeline:
         self.developer = DeveloperAgent().get_agent()
         self.validator = ValidatorAgent().get_agent()
 
-    def compile_animation_pipeline(self, user_transcript: str, primitive_type: str) -> str:
+    def compile_animation_pipeline(self, user_transcript: str, primitive_type: str, feedback: str = "") -> str:
+        
         task_plan = Task(
             description=f"Analyze transcript: '{user_transcript}' for primitive: '{primitive_type}'. Output a step roadmap.",
             expected_output="Markdown roadmap tracking state modifications per frame step.",
             agent=self.planner,
             cache=False
         )
+        feedback_context = ""
+        if feedback:
+            feedback_context = f"\n\n⚠️ CRITICAL FIX NEEDED FROM PREVIOUS RUN:\nYour previous JSON protocol was incorrect. Fix this: {feedback}"
 
         task_develop = Task(
             description=(
-                "Convert the roadmap into an executable Python Manim script. Write explicit scene movements. "
-                "CRUCIAL COLOR RULES: Never use variable names for custom colors. If you want a custom color, "
-                "use an explicit Hex string inline (e.g., color='#FFBF00' instead of color=AMBER). Otherwise use standard 'GOLD' or 'ORANGE'."
+                f"Convert the roadmap into a sequence of state-machine actions in a JSON array format.{feedback_context}"
+                "\nFollow the JSON PROTOCOL SPECIFICATION strictly. Output ONLY the raw JSON array containing action dictionary objects."
             ),
-            expected_output="Pure Python code block inheriting from Manim Scene class.",
+            expected_output="A raw JSON array containing action dictionary objects.",
             agent=self.developer,
             cache=False
         )
 
         task_validate = Task(
-            description=f"Verify code syntax and alignment with user input: '{user_transcript}'. Fix any errors found.",
-            expected_output="Pure, executable Python code string block inheriting from a Manim Scene class completely free of markdown wrappers or inline explanations.",
+            description=f"Verify that the generated JSON array is syntactically correct and perfectly represents the planned roadmap steps.",
+            expected_output="A pure verified JSON array string completely free of markdown wrappers or conversational intro/outro.",
             agent=self.validator,
             cache=False
         )
