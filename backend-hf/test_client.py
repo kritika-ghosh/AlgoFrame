@@ -7,7 +7,24 @@ def test_text_synthesis():
     
     # 1. Your refined algorithmic roadmap
     algorithm_steps = """
-To perform a basic swap of two numbers, $a$ and $b$, the algorithm utilizes a temporary storage variable to facilitate the exchange of their respective values without losing data.The process begins by assigning the value of $a$ to the temporary variable, effectively creating a safe copy of that data. With the original value of $a$ secured, the value of $b$ is then assigned to $a$. Finally, the value held in the temporary variable is assigned to $b$. This sequence of three assignments ensures that the initial values are inverted—meaning the original value of $a$ now resides in $b$, and the original value of $b$ now resides in $a$—completing the swap without the need for additional arithmetic operations.
+To merge two sorted sub-arrays (Block A and Block B) into a single sorted range without allocating a new array, you must treat the array like a series of blocks that need to be "rotated" past each other.
+
+The algorithm relies on the Array Rotation principle, which is an application of the reversal algorithm we discussed earlier. The process generally follows these logic points:
+
+Find the Pivot: You search for the first element in Block B that is smaller than the last element of Block A. This identifies the "misplaced" elements that prevent the array from being sorted.
+
+Divide and Conquer: You identify sub-blocks within the ranges. You aren't just swapping individual elements; you are identifying a "partition" point and swapping entire contiguous chunks (blocks) of data.
+
+Block Rotation (The Swap): To move a block of elements across another without extra space, you use a three-step reversal sequence:
+
+Reverse the first block.
+
+Reverse the second block.
+
+Reverse the combined range.
+This effectively swaps the positions of the two blocks in-place without needing a temporary buffer equal to the size of the array.
+
+Recursion: After the swap, the problem is divided into two smaller sub-problems, which are solved recursively until the entire array is sorted.
 """
 
     # 2. Package into the payload
