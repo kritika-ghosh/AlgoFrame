@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const BACKEND_URL = 'https://huggingface.co/spaces/kritika53245/AlgoFrame';
+const BACKEND_URL = 'https://kritika53245-algoframe.hf.space';
 
 interface WorkspaceProps {
   onBack: () => void;
@@ -284,9 +284,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onBack }) => {
     setDsType(type);
   };
 
-  const bstSample = `Initialize a Binary Search Tree. First insert the root node 10. Next, insert 5 which goes to the left branch. Then insert 15 which goes to the right branch. Finally, traverse the tree in pre-order.`;
-  const arraySample = `Create a 1D sequential array of size 5 with elements 12, 45, 78, 23, and 56. Highlight the value at index 2, swap it with the element at index 4, and visualise the pointer swap operations clearly.`;
-  const queueSample = `Create a FIFO queue with elements [10, 20, 30]. Show the enqueue operation of value 40 at the tail, and then show the dequeue operation removing 10 from the head.`;
+  const bstSample = `Create a Binary Search Tree starting with root 50. Animate inserting 30, showing a highlight pointer tracing down from 50 to the left branch. Then animate inserting 70, showing the trace from 50 down to the right branch. Finally, run a Pre-Order Traversal: highlight 50, then highlight 30, and then highlight 70 with glowing blue pulses as each is visited.`;
+  const arraySample = `Perform the first pass of a Bubble Sort algorithm on a 1D array with values [80, 20, 60, 40, 10]. Step 1: Compare index 0 (80) and index 1 (20). Since 80 > 20, swap their values using curved arcs, while shifting index pointers under the cells. Step 2: Compare the new index 1 (80) and index 2 (60). Highlight them in yellow, then swap 80 and 60. Step 3: Compare index 2 (80) and index 3 (40), and swap them. Finally, highlight the sorted element (80) at its final index in green to lock it.`;
+  const queueSample = `Create a FIFO queue structure initialized with values [10, 20, 30]. Show the enqueue operation: a new node 40 slides in from the right and links to the tail. Next, show the dequeue operation: the front node 10 highlights in orange, slides left, and fades out, while the front index pointer dynamically shifts right to point at node 20.`;
 
   return (
     <div className="workspace-container">

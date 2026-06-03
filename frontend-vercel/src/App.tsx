@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { Workspace } from './components/Workspace';
 
-const BACKEND_URL = 'https://huggingface.co/spaces/kritika53245/AlgoFrame';
+const BACKEND_URL = 'https://kritika53245-algoframe.hf.space';
 
 function App() {
   const [page, setPage] = useState<'landing' | 'workspace'>('landing');
