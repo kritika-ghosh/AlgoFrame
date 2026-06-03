@@ -1,13 +1,3 @@
----
-title: AlgoFrame
-emoji: 🎥
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # <p align="center"><img src="https://img.icons8.com/nolan/96/artificial-intelligence.png" width="80"/><br>AlgoFrame AI</p>
 
 <p align="center">
@@ -139,5 +129,5 @@ python test/test_audio_client.py
 ---
 
 <p align="center">
-  <sub>Developed for the <strong>FlowZint AI Hackathon 2026</strong>. Built with 💚 and code syntax.</sub>
+  <sub>Developed for the <strong>FlowZint AI Hackathon 2026</strong>. Built with 💚 by **kri**.</sub>
 </p>
