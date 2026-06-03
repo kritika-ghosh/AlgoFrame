@@ -216,7 +216,7 @@ class StateRegistry:
         end_node = self.get_node(end_id)
         if start_node and end_node:
             edge = DataEdge(start_node, end_node, directed=directed, color=color)
-            self.edges[(str(start_id), str(end_id))] = edge
+            self.edges[(str(start_node.node_id), str(end_node.node_id))] = edge
             return edge
         return None
 
@@ -252,6 +252,8 @@ class StateRegistry:
                 node = RendererFactory.create_node(node_id, val, shape_type="square", color=BLUE)
                 node.move_to(pos)
                 self.add_node(node)
+                self.nodes[f"node_{i}"] = node
+                self.nodes[str(i)] = node
                 self.structures[struct_id]["node_ids"].append(node_id)
                 self.array_order.append(node_id)
                 
@@ -271,6 +273,8 @@ class StateRegistry:
                 node = RendererFactory.create_node(nid, val, shape_type="circle", color=GOLD)
                 node.move_to(pos)
                 self.add_node(node)
+                self.nodes[f"node_{nid}"] = node
+                self.nodes[str(val)] = node
                 self.structures[struct_id]["node_ids"].append(nid)
                 node_group.add(node)
                 
@@ -301,6 +305,8 @@ class StateRegistry:
                 node = RendererFactory.create_node(nid, val, shape_type="circle", color=TEAL)
                 node.move_to(pos)
                 self.add_node(node)
+                self.nodes[f"node_{nid}"] = node
+                self.nodes[str(val)] = node
                 self.structures[struct_id]["node_ids"].append(nid)
                 node_group.add(node)
                 
@@ -431,7 +437,7 @@ class StateRegistry:
             # Find incoming edge from a parent
             parent_edge = None
             for (u, v), edge in self.edges.items():
-                if str(v) == str(tid):
+                if str(v) == str(target_node.node_id):
                     parent_edge = edge
                     break
                     
@@ -468,13 +474,16 @@ class StateRegistry:
 
     def unlink(self, from_id, to_id):
         # Scan for edge key
-        key1 = (str(from_id), str(to_id))
-        key2 = (str(to_id), str(from_id))
-        edge = self.edges.get(key1) or self.edges.get(key2)
-        if edge:
-            self.scene.play(FadeOut(edge))
-            self.edges.pop(key1, None)
-            self.edges.pop(key2, None)
+        node1 = self.get_node(from_id)
+        node2 = self.get_node(to_id)
+        if node1 and node2:
+            key1 = (str(node1.node_id), str(node2.node_id))
+            key2 = (str(node2.node_id), str(node1.node_id))
+            edge = self.edges.get(key1) or self.edges.get(key2)
+            if edge:
+                self.scene.play(FadeOut(edge))
+                self.edges.pop(key1, None)
+                self.edges.pop(key2, None)
 
     def set_value(self, target_id, new_value):
         node = self.get_node(target_id)
@@ -499,6 +508,10 @@ class StateRegistry:
         
         if self.array_order:
             self.array_order.sort(key=lambda nid: self.nodes[nid].get_center()[0])
+            for idx, nid in enumerate(self.array_order):
+                node = self.nodes[nid]
+                self.nodes[str(idx)] = node
+                self.nodes[f"node_{idx}"] = node
 
     def swap_blocks(self, ids1, ids2, path_arc=0.5):
         group1 = VGroup(*[self.nodes[id] for id in ids1 if id in self.nodes])
@@ -522,6 +535,10 @@ class StateRegistry:
         
         if self.array_order:
             self.array_order.sort(key=lambda nid: self.nodes[nid].get_center()[0])
+            for idx, nid in enumerate(self.array_order):
+                node = self.nodes[nid]
+                self.nodes[str(idx)] = node
+                self.nodes[f"node_{idx}"] = node
 
     def highlight(self, targets, color):
         anims = []

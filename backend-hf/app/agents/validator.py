@@ -1,9 +1,12 @@
-# app/agents/validator.py
 from crewai import Agent, LLM
+from app.core.config import settings
 
 class ValidatorAgent:
     def __init__(self):
-        self.llm_instance = LLM(model="groq/llama-3.3-70b-versatile", temperature=0.0)
+        if settings.GROQ_API_KEY and settings.GROQ_API_KEY.strip():
+            self.llm_instance = LLM(model="groq/llama-3.3-70b-versatile", temperature=0.0)
+        else:
+            self.llm_instance = LLM(model="gemini/gemini-2.5-flash", temperature=0.0)
 
     def get_agent(self) -> Agent:
         return Agent(

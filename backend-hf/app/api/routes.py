@@ -8,6 +8,7 @@ from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from fastapi.responses import FileResponse
 
 # Core Pipeline Integrations
+from app.core.config import settings
 from app.src.crew import AlgoFrameCrewPipeline
 from app.services.video_service import VideoMultiplexService
 from app.services.critic_service import VisualCriticService
@@ -114,7 +115,7 @@ def generate_video_pipeline(
             f.write(manim_code)
             
         print(f"[PROCESSING]: Executing local Manim subprocess shell compiler...")
-        compile_cmd = ["manim", "-ql", scene_filename, "--media_dir", "./output"]
+        compile_cmd = ["manim", settings.MANIM_QUALITY_FLAG, scene_filename, "--media_dir", "./output"]
         subprocess_result = subprocess.run(compile_cmd, capture_output=True, text=True, timeout=120)
         if subprocess_result.returncode != 0:
             compilation_error = subprocess_result.stderr
@@ -138,7 +139,8 @@ def generate_video_pipeline(
                     break
                     
         if not predicted_silent_video:
-            predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/480p15/ArrayInitialization.mp4")
+            quality_folder = "720p30" if settings.MANIM_QUALITY_FLAG == "-qm" else ("1080p60" if settings.MANIM_QUALITY_FLAG == "-qh" else "480p15")
+            predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/{quality_folder}/ArrayInitialization.mp4")
         
         if saved_audio_path:
             print(f"[PROCESSING]: Video rendered. Multiplexing audio-video...")
@@ -198,7 +200,7 @@ def generate_video_pipeline(
                 f.write(fixed_manim_code)
                 
             print(f"[PROCESSING]: Compiling fixed script via Manim...")
-            compile_cmd = ["manim", "-ql", scene_filename, "--media_dir", "./output"]
+            compile_cmd = ["manim", settings.MANIM_QUALITY_FLAG, scene_filename, "--media_dir", "./output"]
             subprocess_result = subprocess.run(compile_cmd, capture_output=True, text=True, timeout=120)
             
             if subprocess_result.returncode != 0:
@@ -218,7 +220,8 @@ def generate_video_pipeline(
                             break
                             
                 if not predicted_silent_video:
-                    predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/480p15/ArrayInitialization.mp4")
+                    quality_folder = "720p30" if settings.MANIM_QUALITY_FLAG == "-qm" else ("1080p60" if settings.MANIM_QUALITY_FLAG == "-qh" else "480p15")
+                    predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/{quality_folder}/ArrayInitialization.mp4")
                 
                 if saved_audio_path:
                     multiplexer = VideoMultiplexService()

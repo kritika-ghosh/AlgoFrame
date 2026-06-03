@@ -15,9 +15,15 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.api.routes import router as api_router
 
-# 1. Route LiteLLM seamlessly to Groq system parameters globally
-os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
-os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
+if settings.GROQ_API_KEY and settings.GROQ_API_KEY.strip():
+    os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY.strip()
+elif "GROQ_API_KEY" in os.environ:
+    del os.environ["GROQ_API_KEY"]
+
+if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip():
+    os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY.strip()
+elif "GEMINI_API_KEY" in os.environ:
+    del os.environ["GEMINI_API_KEY"]
 # 2. Strict cleanup: Prevent CrewAI from drifting back into OpenAI fallbacks
 if "OPENAI_API_KEY" in os.environ:
     del os.environ["OPENAI_API_KEY"]
@@ -134,6 +140,9 @@ async def lifespan(app: FastAPI):
     yield
     # Cleanup routines can be declared here if needed
 
+# Ensure static directory exists at startup module import time
+os.makedirs("output", exist_ok=True)
+
 app = FastAPI(
     title="AlgoFrame AI — Agentic Synthesis Core Engine",
     description="Multi-Agent Production Backend powering autonomous code-to-video Manim compilation pipelines.",
@@ -156,6 +165,16 @@ app.mount("/static", StaticFiles(directory="output"), name="static")
 
 # Register our multi-agent pipeline routes
 app.include_router(api_router)
+
+@app.get("/")
+async def root_welcome():
+    """Root index path returning system status and entrypoints."""
+    return {
+        "status": "operational",
+        "engine": "AlgoFrame AI Production Node Core",
+        "docs": "/docs",
+        "health": "/health"
+    }
 
 @app.get("/health")
 async def app_health_check():

@@ -44,14 +44,16 @@ class ProtocolCompiler:
                 continue
             action = op.get("action", "").upper()
             if action in ["CREATE", "CREATE_ARRAY"]:
-                if action == "CREATE_ARRAY" or "values" in op:
+                if "state" in op:
+                    state = op.get("state", {})
+                elif action == "CREATE_ARRAY" or "values" in op:
                     vals = op.get("values", [])
                     color = op.get("color", "BLUE")
                     shape = op.get("shape_type", "square")
                     spacing = op.get("spacing", 1.2)
                     state = {"type": "array", "data": vals, "color": color, "shape_type": shape, "spacing": spacing}
                 else:
-                    state = op.get("state", {})
+                    state = {}
                 
                 struct_id = op.get("id") or state.get("type", "main")
                 y_offset = 0.0
