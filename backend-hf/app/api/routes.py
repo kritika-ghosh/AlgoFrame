@@ -20,7 +20,7 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 
 @router.post("/generate-video")
 def generate_video_pipeline(
-    primitive_type: str = Form(..., description="The underlying data structure or algorithm type (e.g., array, tree, graph)"),
+    primitive_type: Optional[str] = Form(None, description="The underlying data structure or algorithm type (e.g., array, tree, graph)"),
     explanation_text: Optional[str] = Form(None, description="Raw explanation string if inputting text directly"),
     file: Optional[UploadFile] = File(None, description="Uploaded Audio file (.wav/.mp4) or Text file (.txt)")
 ):
@@ -64,6 +64,20 @@ def generate_video_pipeline(
 
     if not final_text_prompt.strip():
         raise HTTPException(status_code=400, detail="Parsed text engine prompt cannot be completely empty.")
+
+    # Auto-resolve primitive type if not provided or set to 'auto'
+    if not primitive_type or primitive_type.lower() == "auto":
+        prompt_lower = final_text_prompt.lower()
+        if "tree" in prompt_lower:
+            primitive_type = "tree"
+        elif "graph" in prompt_lower or "vertex" in prompt_lower or "edge" in prompt_lower:
+            primitive_type = "graph"
+        elif "stack" in prompt_lower:
+            primitive_type = "stack"
+        elif "queue" in prompt_lower or "deque" in prompt_lower:
+            primitive_type = "queue"
+        else:
+            primitive_type = "array"
 
     # ─── SELF-HEALING CRITIQUE MATRIX ─────────────────────────────────────────
     final_video_target = None

@@ -11,9 +11,16 @@ __pycache__/
 
 # Core AlgoFrame App Outputs / Temporary Assets
 output/
+media/
+temp_processing/
 *.mp4
 *.wav
+*.mp3
+*.log
 scene_*.py
 
 # Environment Keys and Secrets
 .env
+
+# Testing files folder
+test/
