@@ -279,12 +279,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onBack }) => {
   };
 
   // Sample prompt helpers
-  const applySamplePrompt = (text: string) => {
+  const applySamplePrompt = (text: string, type: string) => {
     setExplanationText(text);
+    setDsType(type);
   };
 
   const bstSample = `Initialize a Binary Search Tree. First insert the root node 10. Next, insert 5 which goes to the left branch. Then insert 15 which goes to the right branch. Finally, traverse the tree in pre-order.`;
   const arraySample = `Create a 1D sequential array of size 5 with elements 12, 45, 78, 23, and 56. Highlight the value at index 2, swap it with the element at index 4, and visualise the pointer swap operations clearly.`;
+  const queueSample = `Create a FIFO queue with elements [10, 20, 30]. Show the enqueue operation of value 40 at the tail, and then show the dequeue operation removing 10 from the head.`;
 
   return (
     <div className="workspace-container">
@@ -347,10 +349,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onBack }) => {
                 onChange={(e) => setExplanationText(e.target.value)}
                 disabled={isCompiling}
               />
-              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Load template:</span>
-                <button type="button" className="btn-secondary" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => applySamplePrompt(arraySample)}>Array Swap</button>
-                <button type="button" className="btn-secondary" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => applySamplePrompt(bstSample)}>BST Insertion</button>
+              <div style={{ padding: '12px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', marginTop: '10px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>⚡ QUICK-RUN TEMPLATES FOR JUDGES:</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button type="button" className="btn-accent-green" style={{ fontSize: '0.7rem', padding: '6px 10px' }} onClick={() => applySamplePrompt(arraySample, 'array')}>1. Array Swap</button>
+                  <button type="button" className="btn-accent-green" style={{ fontSize: '0.7rem', padding: '6px 10px' }} onClick={() => applySamplePrompt(bstSample, 'tree')}>2. BST Insertion</button>
+                  <button type="button" className="btn-accent-green" style={{ fontSize: '0.7rem', padding: '6px 10px' }} onClick={() => applySamplePrompt(queueSample, 'queue')}>3. Queue Ops</button>
+                </div>
               </div>
             </div>
           ) : (
