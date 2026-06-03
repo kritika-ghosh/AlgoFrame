@@ -37,12 +37,12 @@ def generate_video_pipeline(
             shutil.copyfileobj(file.file, buffer)
 
         if file_ext == ".txt":
-            print(f"⚙️ [PROCESSING]: Text file received. Parsing file string blocks...")
+            print(f"[PROCESSING]: Text file received. Parsing file string blocks...")
             with open(temp_file_path, "r", encoding="utf-8") as txt_file:
                 final_text_prompt = txt_file.read()
                 
         elif file_ext in [".wav", ".mp3", ".m4a", ".mp4"]:
-            print(f"⚙️ [PROCESSING]: Audio successfully received. Transcribing voice tracks via Groq Whisper...")
+            print(f"[PROCESSING]: Audio successfully received. Transcribing voice tracks via Groq Whisper...")
             saved_audio_path = temp_file_path
             try:
                 with open(saved_audio_path, "rb") as audio_file:
@@ -57,7 +57,7 @@ def generate_video_pipeline(
             raise HTTPException(status_code=400, detail="Unsupported file format type uploaded.")
             
     elif explanation_text:
-        print(f"⚙️ [PROCESSING]: Direct text explanation token string captured...")
+        print(f"[PROCESSING]: Direct text explanation token string captured...")
         final_text_prompt = explanation_text
     else:
         raise HTTPException(status_code=400, detail="No source artifact provided. Upload an audio/text asset or supply inline text.")
@@ -71,7 +71,7 @@ def generate_video_pipeline(
     scene_filename = f"scene_{session_id}.py"
 
     # ─── STEP 2: RUN THE CRITICAL AGENTIC FLOW (ONCE ONLY) ────────────────────
-    print(f"⚙️ [PROCESSING]: Spawning CrewAI Agents to generate state-machine JSON protocol...")
+    print(f"[PROCESSING]: Spawning CrewAI Agents to generate state-machine JSON protocol...")
     try:
         crew_pipeline = AlgoFrameCrewPipeline()
         generated_json_protocol = crew_pipeline.compile_animation_pipeline(
@@ -99,8 +99,8 @@ def generate_video_pipeline(
         with open(scene_filename, "w", encoding="utf-8") as f:
             f.write(manim_code)
             
-        print(f"⚙️ [PROCESSING]: Executing local Manim subprocess shell compiler...")
-        compile_cmd = ["manim", "-ql", scene_filename]
+        print(f"[PROCESSING]: Executing local Manim subprocess shell compiler...")
+        compile_cmd = ["manim", "-ql", scene_filename, "--media_dir", "./output"]
         subprocess_result = subprocess.run(compile_cmd, capture_output=True, text=True, timeout=120)
         if subprocess_result.returncode != 0:
             compilation_error = subprocess_result.stderr
@@ -113,10 +113,21 @@ def generate_video_pipeline(
     discovered_video_path = None
 
     if not compilation_error:
-        predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/480p30/ArrayInitialization.mp4")
+        # Locate the compiled video path dynamically in the output directory
+        scene_output_dir = os.path.normpath(f"output/videos/scene_{session_id}")
+        predicted_silent_video = None
+        if os.path.exists(scene_output_dir):
+            for root, _, files in os.walk(scene_output_dir):
+                mp4s = [f for f in files if f.endswith(".mp4")]
+                if mp4s:
+                    predicted_silent_video = os.path.normpath(os.path.join(root, mp4s[0]))
+                    break
+                    
+        if not predicted_silent_video:
+            predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/480p15/ArrayInitialization.mp4")
         
         if saved_audio_path:
-            print(f"⚙️ [PROCESSING]: Video rendered. Multiplexing audio-video...")
+            print(f"[PROCESSING]: Video rendered. Multiplexing audio-video...")
             multiplexer = VideoMultiplexService()
             merge_result = multiplexer.merge_audio_video(
                 silent_video_path=predicted_silent_video,
@@ -133,32 +144,33 @@ def generate_video_pipeline(
                  discovered_video_path = fallback_check["final_asset_path"]
             else:
                  discovered_video_path = predicted_silent_video
-                 for root, _, files in os.walk("."):
-                     if f"scene_{session_id}" in root:
+                 # Fail safe walk inside output folder ONLY to prevent root-walk collision
+                 if os.path.exists(scene_output_dir):
+                     for root, _, files in os.walk(scene_output_dir):
                          mp4s = [f for f in files if f.endswith(".mp4")]
                          if mp4s:
                              discovered_video_path = os.path.join(root, mp4s[0])
                              break
 
         # ─── THE CRITICAL MULTIMODAL AUDIT GATE (ONCE ONLY) ────────────────────
-        print(f"⚙️ [PROCESSING]: Visual critique initiated...")
+        print(f"[PROCESSING]: Visual critique initiated...")
         audit_results = critic.critique_video(discovered_video_path, final_text_prompt)
 
         if audit_results["passed"]:
-            print("🚀 [PIPELINE SUCCESS]: Visual Critic approved the animation presentation!")
+            print("[PIPELINE SUCCESS]: Visual Critic approved the animation presentation!")
             final_video_target = discovered_video_path
         else:
-            print(f"❌ [PIPELINE REJECTION]: Visual validation failed. Critique: {audit_results['feedback']}")
+            print(f"[PIPELINE REJECTION]: Visual validation failed. Critique: {audit_results['feedback']}")
             video_needs_fixing = True
             critic_feedback = audit_results["feedback"]
     else:
-        print(f"❌ [COMPILATION FAILURE]: Manim syntax / structure validation failed. Error: {compilation_error}")
+        print(f"[COMPILATION FAILURE]: Manim syntax / structure validation failed. Error: {compilation_error}")
         video_needs_fixing = True
         critic_feedback = f"Compilation Error: {compilation_error}"
 
     # ─── THE DIRECT SELF-HEALING CORRECTION PASS (ONCE ONLY) ──────────────────
     if video_needs_fixing:
-        print(f"⚙️ [PROCESSING]: Direct self-healing correction active. Critic is fixing the JSON protocol...")
+        print(f"[PROCESSING]: Direct self-healing correction active. Critic is fixing the JSON protocol...")
         try:
             fixed_json = critic.fix_json_protocol(
                 user_prompt=final_text_prompt,
@@ -171,18 +183,28 @@ def generate_video_pipeline(
             with open(scene_filename, "w", encoding="utf-8") as f:
                 f.write(fixed_manim_code)
                 
-            print(f"⚙️ [PROCESSING]: Compiling fixed script via Manim...")
-            compile_cmd = ["manim", "-ql", scene_filename]
+            print(f"[PROCESSING]: Compiling fixed script via Manim...")
+            compile_cmd = ["manim", "-ql", scene_filename, "--media_dir", "./output"]
             subprocess_result = subprocess.run(compile_cmd, capture_output=True, text=True, timeout=120)
             
             if subprocess_result.returncode != 0:
-                print(f"⚠️ [Self-Healing Failure]: Direct correction compile failed. Error: {subprocess_result.stderr}")
+                print(f"[Self-Healing Failure]: Direct correction compile failed. Error: {subprocess_result.stderr}")
                 # Use whatever video was discovered, or raise if empty
                 if discovered_video_path and os.path.exists(discovered_video_path):
                     final_video_target = discovered_video_path
             else:
                 # Merge the corrected video
-                predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/480p30/ArrayInitialization.mp4")
+                scene_output_dir = os.path.normpath(f"output/videos/scene_{session_id}")
+                predicted_silent_video = None
+                if os.path.exists(scene_output_dir):
+                    for root, _, files in os.walk(scene_output_dir):
+                        mp4s = [f for f in files if f.endswith(".mp4")]
+                        if mp4s:
+                            predicted_silent_video = os.path.normpath(os.path.join(root, mp4s[0]))
+                            break
+                            
+                if not predicted_silent_video:
+                    predicted_silent_video = os.path.normpath(f"output/videos/scene_{session_id}/480p15/ArrayInitialization.mp4")
                 
                 if saved_audio_path:
                     multiplexer = VideoMultiplexService()
@@ -194,15 +216,15 @@ def generate_video_pipeline(
                         discovered_video_path = merge_result["final_asset_path"]
                         
                 if not discovered_video_path:
-                    for root, _, files in os.walk("."):
-                        if f"scene_{session_id}" in root:
-                            mp4s = [f for f in files if f.endswith(".mp4")]
-                            if mp4s:
-                                discovered_video_path = os.path.join(root, mp4s[0])
-                                break
+                     if os.path.exists(scene_output_dir):
+                         for root, _, files in os.walk(scene_output_dir):
+                             mp4s = [f for f in files if f.endswith(".mp4")]
+                             if mp4s:
+                                 discovered_video_path = os.path.join(root, mp4s[0])
+                                 break
                 final_video_target = discovered_video_path
         except Exception as patch_e:
-            print(f"⚠️ [Self-healing Patch Crash]: {str(patch_e)}")
+            print(f"[Self-healing Patch Crash]: {str(patch_e)}")
             if discovered_video_path and os.path.exists(discovered_video_path):
                 final_video_target = discovered_video_path
     else:

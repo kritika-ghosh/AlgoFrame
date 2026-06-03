@@ -12,7 +12,7 @@ class VisualCriticService:
         """
         Uploads the compiled video and verifies both algorithmic logic and spatial readability.
         """
-        print(f"👁️ [Visual Critic]: Uploading {video_path} to Gemini Pro Unified Inspector...")
+        print(f"[Visual Critic]: Uploading {video_path} to Gemini Pro Unified Inspector...")
         
         video_file = genai.upload_file(path=video_path)
         
@@ -48,7 +48,7 @@ class VisualCriticService:
         try:
             response = self.model.generate_content([video_file, critic_prompt])
             result_text = response.text
-            print(f"📊 [Visual Critic Logic Audit Result]:\n{result_text}")
+            print(f"[Visual Critic Logic Audit Result]:\n{result_text}")
 
             try:
                 genai.delete_file(video_file.name)
@@ -67,7 +67,7 @@ class VisualCriticService:
                 genai.delete_file(video_file.name)
             except:
                 pass
-            print(f"⚠️ [Critic Exception]: Loop recovery active: {str(e)}")
+            print(f"[Critic Exception]: Loop recovery active: {str(e)}")
             return {"passed": True, "feedback": ""}
 
     def fix_json_protocol(self, user_prompt: str, broken_json: str, feedback_or_error: str) -> str:
@@ -92,24 +92,28 @@ class VisualCriticService:
 
         JSON PROTOCOL SPECIFICATION:
         Your output must be a valid JSON array of dictionary objects, where each object has an 'action' field, one of:
-        1. {{"action": "CREATE_ARRAY", "values": [...], "color": "color_name", "shape_type": "square|circle|rounded_rectangle"}}
-        2. {{"action": "HIGHLIGHT", "targets": ["node_x", ...], "color": "color_name"}}
-        3. {{"action": "SWAP", "id1": "node_x", "id2": "node_y", "path_arc": 0.5}}
-        4. {{"action": "SWAP_BLOCKS", "block1": ["node_a", ...], "block2": ["node_b", ...], "path_arc": 0.5}}
-        5. {{"action": "WAIT", "seconds": 1.0}}
+        1. {{"action": "CREATE", "state": {{"type": "array"|"stack"|"queue"|"tree"|"graph", ...}}}}
+        2. {{"action": "VISIT", "targets": ["node_x", ...], "color": "color_name"}}
+        3. {{"action": "LINK", "from": "node_x", "to": "node_y", "directed": true|false, "color": "color_name"}}
+        4. {{"action": "UNLINK", "from": "node_x", "to": "node_y"}}
+        5. {{"action": "SET_VALUE", "target": "node_x", "value": new_val}}
+        6. {{"action": "SWAP", "id1": "node_x", "id2": "node_y", "path_arc": 0.5}}
+        7. {{"action": "SWAP_BLOCKS", "block1": ["node_a", ...], "block2": ["node_b", ...], "path_arc": 0.5}}
+        8. {{"action": "HIGHLIGHT", "targets": ["node_x", ...], "color": "color_name"}}
+        9. {{"action": "WAIT", "seconds": 1.0}}
 
         RULES:
         - Rectify the exact failure described in the critique/error.
-        - Ensure all referenced node IDs ('node_0', 'node_1', etc.) match their original assignments.
+        - Ensure all referenced node IDs match their original assignments.
         - Output ONLY the raw JSON array. Never wrap in markdown code blocks. No conversational text.
         """
         
         try:
-            print(f"🔧 [Visual Critic]: Invoking direct self-healing patch via Gemini...")
+            print(f"[Visual Critic]: Invoking direct self-healing patch via Gemini...")
             response = self.model.generate_content(fix_prompt)
             result = response.text.strip()
-            print(f"📊 [Visual Critic self-healing output]:\n{result}")
+            print(f"[Visual Critic self-healing output]:\n{result}")
             return result
         except Exception as e:
-            print(f"⚠️ [Critic Self-healing Failure]: {str(e)}")
+            print(f"[Critic Self-healing Failure]: {str(e)}")
             return broken_json
