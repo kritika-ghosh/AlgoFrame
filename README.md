@@ -129,5 +129,5 @@ python test/test_audio_client.py
 ---
 
 <p align="center">
-  <sub>Developed for the <strong>FlowZint AI Hackathon 2026</strong>. Built with 💚 by **kri**.</sub>
+  <sub>Developed for the <strong>FlowZint AI Hackathon 2026</strong>. Built with 💚 by Kritika Ghosh.</sub>
 </p>
